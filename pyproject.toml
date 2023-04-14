@@ -25,6 +25,8 @@ python-dotenv = "^1.0.0"
 fitz = "^0.0.1.dev2"
 PyMuPDF = "^1.18.13"
 google-cloud-storage = "^2.8.0"
+scipdf-mirror = "^0.1.dev0"
+bs4 = "^0.0.1"
 
 [build-system]
 requires = ["poetry-core"]

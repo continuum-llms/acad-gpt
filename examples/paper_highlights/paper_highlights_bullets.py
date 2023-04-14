@@ -34,12 +34,14 @@ if __name__ == "__main__":
     chat_gpt_client = ChatGPTClient(config=chat_gpt_config, memory_manager=memory_manager)
 
     parser = PDFParser()
-    parser_config = ParserConfig(file_path_or_url="examples/paper_highlights/whisper.pdf", file_type="PDF")
+    parser_config = ParserConfig(
+        file_path_or_url="examples/paper_highlights/pdf/whisper.pdf", file_type="PDF", extract_figures=True
+    )
 
     prompt = f"""
     Please convert the following context to bullet points,
     only use the information given in the following paragraphs
-    {parser.parse(config=parser_config)[0]}
+    {parser.parse(config=parser_config)[0][0]}
     """
 
     # Use the ChatGPTClient object to generate a response
