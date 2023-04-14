@@ -1,6 +1,8 @@
+import os
 from typing import Any, List, Tuple
 
 import fitz
+import scipdf
 
 """
 https://medium.com/@vinitvaibhav9/extracting-pdf-highlights-using-python-9512af43a6d
@@ -59,3 +61,15 @@ def post_process_highlights(highights: List) -> str:
     post_processed_highlights += " " + highights[-1]
 
     return post_processed_highlights
+
+
+def get_paper_metadata(
+    file_path: str, extract_figures: bool = False, figures_directory: str = "/examples/paper_highlights/pdf/figures"
+):
+    paper_metadata = scipdf.parse_pdf_to_dict(file_path)
+
+    if extract_figures:
+        # folder should contain only PDF files
+        scipdf.parse_figures(file_path, output_folder=f"{os.getcwd()}{figures_directory}")
+        # TODO: clean up extracted images after storing them in object storage
+    return paper_metadata
