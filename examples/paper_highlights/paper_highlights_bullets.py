@@ -5,7 +5,7 @@ from acad_gpt.datastore import RedisDataStore, RedisDataStoreConfig
 from acad_gpt.environment import OPENAI_API_KEY, REDIS_HOST, REDIS_PASSWORD, REDIS_PORT
 from acad_gpt.llm_client import ChatGPTClient, ChatGPTConfig, EmbeddingClient, EmbeddingConfig
 from acad_gpt.memory import MemoryManager
-from acad_gpt.parsers import ParserConfig, PDFParser
+from acad_gpt.parsers import PDFParser, PDFParserConfig
 
 if __name__ == "__main__":
     # Instantiate an EmbeddingConfig object with the OpenAI API key
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     chat_gpt_client = ChatGPTClient(config=chat_gpt_config, memory_manager=memory_manager)
 
     parser = PDFParser()
-    parser_config = ParserConfig(file_path_or_url="examples/paper_highlights/whisper.pdf", file_type="PDF")
+    parser_config = PDFParserConfig(file_path_or_url="examples/paper_highlights/whisper.pdf")
 
     prompt = f"""
     Please convert the following context to bullet points,
