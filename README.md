@@ -76,6 +76,7 @@ This will allow you to talk to the AI assistant and extend its memory by using a
 
 TODOS:
 
+- [ ] Add first version of REST API
 - [ ] Refactor entire code base to make it more maintainable
 - [ ] Add contribution guide
 - [ ] Add readthedocs page post-refactor
