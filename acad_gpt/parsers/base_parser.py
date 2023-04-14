@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
-
-from acad_gpt.parsers.config import ParserConfig
+from typing import Any
 
 
 class BaseParser(ABC):
@@ -9,5 +8,5 @@ class BaseParser(ABC):
     """
 
     @abstractmethod
-    def parse(self, config: ParserConfig):
+    def parse(self, config: Any):
         raise NotImplementedError

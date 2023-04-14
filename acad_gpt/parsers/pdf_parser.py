@@ -1,12 +1,12 @@
 from typing import Dict, List, Union
 
 from acad_gpt.parsers.base_parser import BaseParser
-from acad_gpt.parsers.config import ParserConfig
+from acad_gpt.parsers.config import PDFParserConfig
 from acad_gpt.utils.pdf_parser_utils import get_pdf_highlights, post_process_highlights, read_pdf
 
 
 class PDFParser(BaseParser):
-    def parse(self, config: Union[ParserConfig, List[ParserConfig]]) -> Dict:
+    def parse(self, config: Union[PDFParserConfig, List[PDFParserConfig]]) -> Dict:
         if not isinstance(config, List):
             config = [config]
 

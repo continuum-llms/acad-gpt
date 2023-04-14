@@ -8,7 +8,7 @@ authors = [
     "Navdeeppal Singh <npsingh0181@gmail.com>"
 ]
 readme = "README.md"
-packages = [{include = "chatgpt_memory"}]
+packages = [{include = "acad_gpt"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -24,6 +24,7 @@ langchain = "^0.0.113"
 python-dotenv = "^1.0.0"
 fitz = "^0.0.1.dev2"
 PyMuPDF = "^1.18.13"
+PyGitHub = "^1.25"
 
 [build-system]
 requires = ["poetry-core"]
