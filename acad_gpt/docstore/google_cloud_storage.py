@@ -9,7 +9,7 @@ from acad_gpt.docstore.base import DocStore
 
 
 class GoogleCloudStorageConfig(BaseModel):
-    bucket_name: str
+    bucket_name: str = "acad-gpt"
     """ The name of the bucket to use. """
     credentials: Optional[service_account.Credentials] = None
     """ The credentials to use. If None, the default credentials are used."""
