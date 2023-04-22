@@ -1,10 +1,11 @@
+import numpy as np
+
 from acad_gpt.datastore import RedisDataStore, RedisDataStoreConfig
 
 ## set the following ENVIRONMENT Variables before running this script
 # Import necessary modules
 from acad_gpt.environment import OPENAI_API_KEY, REDIS_HOST, REDIS_PASSWORD, REDIS_PORT
-from acad_gpt.llm_client import ChatGPTClient, ChatGPTConfig, EmbeddingClient, EmbeddingConfig
-from acad_gpt.memory import MemoryManager
+from acad_gpt.llm_client import EmbeddingClient, EmbeddingConfig
 from acad_gpt.parsers import ParserConfig, PDFParser
 
 if __name__ == "__main__":
@@ -24,27 +25,15 @@ if __name__ == "__main__":
     # Instantiate a RedisDataStore object with the RedisDataStoreConfig object
     redis_datastore = RedisDataStore(config=redis_datastore_config)
 
-    # Instantiate a MemoryManager object with the RedisDataStore object and EmbeddingClient object
-    memory_manager = MemoryManager(datastore=redis_datastore, embed_client=embed_client, topk=1)
-
-    # Instantiate a ChatGPTConfig object with the OpenAI API key and verbose set to True
-    chat_gpt_config = ChatGPTConfig(api_key=OPENAI_API_KEY, verbose=False)
-
-    # Instantiate a ChatGPTClient object with the ChatGPTConfig object and MemoryManager object
-    chat_gpt_client = ChatGPTClient(config=chat_gpt_config, memory_manager=memory_manager)
-
     parser = PDFParser()
     parser_config = ParserConfig(
-        file_path_or_url="examples/paper_highlights/pdf/whisper.pdf", file_type="PDF", extract_figures=True
+        file_path_or_url="examples/paper_highlights/pdf/paper.pdf", file_type="PDF", extract_figures=True
     )
+    results = parser.parse(config=parser_config)
+    documents = parser.pdf_to_documents(pdf_contents=results, embed_client=embed_client, file_name="paper.pdf")
+    redis_datastore.index_documents(documents)
 
-    prompt = f"""
-    Please convert the following context to bullet points,
-    only use the information given in the following paragraphs
-    {parser.parse(config=parser_config)[0][0]}
-    """
-
-    # Use the ChatGPTClient object to generate a response
-    response = chat_gpt_client.converse(message=prompt, conversation_id=None)
-    print("\n\n\n \033[92m Summary of the highlighted content in the Whisper Paper by OpenAI: \n\n\n")
-    print("\033[96m" + response.chat_gpt_answer)
+    while True:
+        query = input("Enter your query: ")
+        query_vector = embed_client.embed_queries(queries=[query])[0].astype(np.float32).tobytes()
+        print(redis_datastore.search_documents(query_vector=query_vector))
