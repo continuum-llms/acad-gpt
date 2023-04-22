@@ -8,7 +8,8 @@ authors = [
     "Navdeeppal Singh <npsingh0181@gmail.com>"
 ]
 readme = "README.md"
-packages = [{include = "acad_gpt"}, {include = "rest_api"}]
+packages = [{include = "acad_gpt"}]
+
 
 [tool.poetry.dependencies]
 python = "^3.10"

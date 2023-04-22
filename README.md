@@ -1,6 +1,7 @@
-# ChatGPT Memory
+# AcadGPT
 
-Allows to scale the ChatGPT API to multiple simultaneous sessions with infinite contextual and adaptive memory powered by GPT and Redis datastore.
+
+A service for distilling papers, github repos, youtube tutorials and much more using the power of LLMs.
 
 ## Getting Started
 
