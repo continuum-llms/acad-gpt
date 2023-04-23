@@ -114,6 +114,8 @@ class RedisDataStore(DataStore):
                 "title",
                 "type",
                 "page",
+                "document",
+                "section",
                 "regionBoundary",
             )
             .dialect(2)

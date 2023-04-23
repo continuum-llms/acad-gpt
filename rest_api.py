@@ -7,6 +7,7 @@ from typing import Any, List
 
 import numpy as np
 from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from acad_gpt.datastore import RedisDataStore, RedisDataStoreConfig
@@ -33,7 +34,18 @@ class Response(BaseModel):
     message: str
 
 
+origins = [
+    "http://localhost:3000",
+]
+
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Instantiate an EmbeddingConfig object with the OpenAI API key
 embedding_config = EmbeddingConfig(api_key=OPENAI_API_KEY)
@@ -70,7 +82,7 @@ def upload_file(
             with file_path.open("wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
                 parser = PDFParser()
-                parser_config = ParserConfig(file_path_or_url=str(file_path), file_type="PDF", extract_figures=True)
+                parser_config = ParserConfig(file_path_or_url=str(file_path), file_type="PDF", extract_figures=False)
                 results = parser.parse(config=parser_config)
                 documents = parser.pdf_to_documents(
                     pdf_contents=results, embed_client=embed_client, file_name=file_name.replace(".pdf", "")
@@ -79,10 +91,16 @@ def upload_file(
                 response.append(
                     Response(
                         file_id=file_name,
-                        message=f"File `{file_name}` has been indexed with {len(documents)} passages.",
+                        message=f"File has been indexed with {len(documents)} passages.",
                     )
                 )
         finally:
+            response.append(
+                Response(
+                    file_id=file_name,
+                    message="Something went wrong!",
+                )
+            )
             file.file.close()
 
     return response
@@ -90,6 +108,13 @@ def upload_file(
 
 @app.post("/search/")
 async def search(search_payload: SearchPayload) -> List[Any]:
+    query_vector = embed_client.embed_queries(queries=[search_payload.query])[0].astype(np.float32).tobytes()
+    search_result = redis_datastore.search_documents(query_vector=query_vector, topk=search_payload.k)
+    return search_result
+
+
+@app.post("/chat/")
+async def chat(search_payload: SearchPayload) -> List[Any]:
     query_vector = embed_client.embed_queries(queries=[search_payload.query])[0].astype(np.float32).tobytes()
     search_result = redis_datastore.search_documents(query_vector=query_vector, topk=search_payload.k)
     return search_result

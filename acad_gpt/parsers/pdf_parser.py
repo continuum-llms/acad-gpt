@@ -43,7 +43,10 @@ class PDFParser(BaseParser):
             paper_metadata, metadata_path = PDFParser.get_paper_metadata(
                 file_path=file_path, extract_figures=config_item.extract_figures
             )
-            parsed_content = {"metadata": paper_metadata, "metadata_path": metadata_path}
+            parsed_content = {
+                "metadata": paper_metadata,
+                "metadata_path": metadata_path if config_item.extract_figures else None,
+            }
             parsed_content["highlights"] = []
             for page_number in range(len(file)):
                 highlighted_page_content = PDFParser.get_pdf_highlights(file[page_number])
@@ -111,86 +114,89 @@ class PDFParser(BaseParser):
 
     @staticmethod
     def get_paper_metadata(file_path: str, extract_figures: bool = False, figures_directory: str = FILE_UPLOAD_PATH):
-        paper_metadata = scipdf.parse_pdf_to_dict(file_path)
-        if extract_figures:
-            isExist = os.path.exists(figures_directory)
-            if not isExist:
-                # create the metadata directory because it does not exist
-                os.makedirs(figures_directory)
+        paper_metadata = None
+        try:
+            paper_metadata = scipdf.parse_pdf_to_dict(file_path)
+            if extract_figures:
+                isExist = os.path.exists(figures_directory)
+                if not isExist:
+                    # create the metadata directory because it does not exist
+                    os.makedirs(figures_directory)
 
-            # folder should contain only PDF files
-            scipdf.parse_figures(file_path, output_folder=figures_directory)
-            # TODO: clean up extracted images after storing them in object storage
+                # folder should contain only PDF files
+                scipdf.parse_figures(file_path, output_folder=figures_directory)
+                # TODO: clean up extracted images after storing them in object storage
+        except Exception as e:
+            print(e)
         return paper_metadata, figures_directory
 
     def pdf_to_documents(
         self, pdf_contents: Dict, embed_client: EmbeddingClient, file_name: str, clean_up: bool = True
     ) -> List[Dict]:
-        title = ""
         metadata_path = pdf_contents.pop("metadata_path")
         documents = []
         document_id = uuid4().hex
-        metadata = dict(pdf_contents.pop("metadata"))
-        title = metadata.pop("title")
-        sections = metadata.pop("sections")
-        abstract = metadata.pop("abstract")
-        embedding = (
-            embed_client.embed_documents(docs=[{"text": f"{title} \n  Abstract: \n  {abstract}"}])[0]
-            .astype(np.float32)
-            .tobytes()
-        )
-        abstract_doc = Document(
-            document_id=document_id,
-            section="Abstract",
-            text=f"{abstract}",
-            title=title,
-            type="Section",
-            page=0,
-            regionBoundary="",
-            embedding=embedding,
-        ).dict()
-
-        documents = [abstract_doc]
-        for section in sections:
-            section_name = section.get("heading", "")
-            text = section.get("text", "")
+        metadata = dict(pdf_contents.pop("metadata")) if pdf_contents.get("metadata") else None
+        title = metadata.pop("title", "")
+        if metadata and metadata_path:
+            sections = metadata.pop("sections")
+            abstract = metadata.pop("abstract")
             embedding = (
-                embed_client.embed_documents(docs=[{"text": f"{title} \n {section_name}: \n  {text}"}])[0]
+                embed_client.embed_documents(docs=[{"text": f"{title} \n  Abstract: \n  {abstract}"}])[0]
                 .astype(np.float32)
                 .tobytes()
             )
-            document = Document(
+            abstract_doc = Document(
                 document_id=document_id,
-                section=section_name,
-                text=text,
+                section="Abstract",
+                text=f"{abstract}",
                 title=title,
-                type="section",
+                type="Section",
                 page=0,
-                embedding=embedding,
                 regionBoundary="",
-            )
-            documents.append(document.dict())
-
-        with open(f"{metadata_path}/data/{file_name}.json") as user_file:
-            file_contents = user_file.read()
-
-        for doc in json.loads(file_contents):
-            text = doc.get("caption", "")
-            embedding = (
-                embed_client.embed_documents(docs=[{"text": f"{title} \n {text}"}])[0].astype(np.float32).tobytes()
-            )
-            document = Document(
-                document_id=uuid4().hex,
-                section="",
-                text=text,
-                title=title,
-                type=doc.get("figType", ""),
-                page=int(doc.get("page", "")),
                 embedding=embedding,
-                regionBoundary=str(doc.get("regionBoundary", "")),
-            )
-            documents.append(document.dict())
+            ).dict()
 
+            documents = [abstract_doc]
+            for section in sections:
+                section_name = section.get("heading", "")
+                text = section.get("text", "")
+                embedding = (
+                    embed_client.embed_documents(docs=[{"text": f"{title} \n {section_name}: \n  {text}"}])[0]
+                    .astype(np.float32)
+                    .tobytes()
+                )
+                document = Document(
+                    document_id=document_id,
+                    section=section_name,
+                    text=text,
+                    title=title,
+                    type="Section",
+                    page=0,
+                    embedding=embedding,
+                    regionBoundary="",
+                )
+                documents.append(document.dict())
+
+            with open(f"{metadata_path}/data/{file_name}.json") as user_file:
+                file_contents = user_file.read()
+
+            for doc in json.loads(file_contents):
+                text = doc.get("caption", "")
+                embedding = (
+                    embed_client.embed_documents(docs=[{"text": f"{title} \n {text}"}])[0].astype(np.float32).tobytes()
+                )
+                document = Document(
+                    document_id=uuid4().hex,
+                    section="",
+                    text=text,
+                    title=title,
+                    type=doc.get("figType", ""),
+                    page=int(doc.get("page", "")),
+                    embedding=embedding,
+                    regionBoundary=str(doc.get("regionBoundary", "")),
+                )
+                documents.append(document.dict())
         for doc in pdf_contents["highlights"]:
             text = doc.get("text", "")
             embedding = (
@@ -208,6 +214,6 @@ class PDFParser(BaseParser):
             )
             documents.append(document.dict())
 
-            if clean_up and os.path.exists(FILE_UPLOAD_PATH):
-                shutil.rmtree(FILE_UPLOAD_PATH)
+        if clean_up and os.path.exists(f"{FILE_UPLOAD_PATH}"):
+            shutil.rmtree(FILE_UPLOAD_PATH)
         return documents

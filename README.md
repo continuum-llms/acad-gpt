@@ -1,9 +1,6 @@
 # AcadGPT
 
-<<<<<<< HEAD
 A service for distilling papers, github repos, youtube tutorials and much more using the power of LLMs.
-=======
-Allows to scale the ChatGPT API to multiple simultaneous sessions with infinite contextual and adaptive memory powered by GPT and Redis datastore.
 
 ## Getting Started
 
@@ -79,7 +76,6 @@ This will allow you to talk to the AI assistant and extend its memory by using a
 
 TODOS:
 
-- [ ] Add first version of REST API
 - [ ] Refactor entire code base to make it more maintainable
 - [ ] Add contribution guide
 - [ ] Add readthedocs page post-refactor
@@ -89,4 +85,3 @@ TODOS:
 - [ ] Integrate with paperswithcode and connected papers' APIs
 - [ ] Add latex based dense vector search
 - [ ] Add voice to conversation interface
->>>>>>> ab5e874 (feat: add repo todos)
