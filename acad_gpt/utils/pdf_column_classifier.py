@@ -26,10 +26,13 @@ DEFAULT_MIDDLE_COLUMN_WIDTH = 2
 EROSION_KERNEL_SIZE = 5
 VOTE_THRESHOLD = 0.7
 
+MAX_PAGES = 5
+
 PDF_CONVERSION_OPTIONS = dict(
     grayscale=True,
     hide_annotations=True,
     paths_only=True,
+    last_page=MAX_PAGES,
 )
 
 
