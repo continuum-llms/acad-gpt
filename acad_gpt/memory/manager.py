@@ -31,7 +31,7 @@ class MemoryManager:
         self.embed_client = embed_client
         self.topk = topk
         self.conversations: List[Memory] = [
-            Memory(conversation_id=conversation_id) for conversation_id in datastore.get_all_conversation_ids()
+            Memory(conversation_id=conversation_id) for conversation_id in datastore.get_all_document_ids()
         ]
 
     def __del__(self) -> None:
@@ -61,7 +61,7 @@ class MemoryManager:
         conversation_idx = self.conversations.index(conversation)
         if conversation_idx >= 0:
             del self.conversations[conversation_idx]
-            self.datastore.delete_documents(conversation_id=conversation.conversation_id)
+            self.datastore.delete_documents(document_id=conversation.conversation_id)
 
     def clear(self) -> None:
         """
@@ -86,23 +86,17 @@ class MemoryManager:
         # optionally check if it is a new conversation
         self.add_conversation(Memory(conversation_id=conversation_id))
 
-    def get_messages(self, conversation_id: str, query: str) -> List[Any]:
+    def get_messages(self, query: str) -> List[Any]:
         """
         Gets the messages of a conversation using the query message.
 
         Args:
-            conversation_id (str): ID of the conversation to get the messages of.
             query (str): Current user message you want to pull history for to use in the prompt.
             topk (int): Number of messages to be returned. Defaults to 5.
 
         Returns:
             List[Any]: List of messages of the conversation.
         """
-        if Memory(conversation_id=conversation_id) not in self.conversations:
-            raise ValueError(f"Conversation id: {conversation_id} is not present in past conversations.")
-
         query_vector = self.embed_client.embed_queries([query])[0].astype(np.float32).tobytes()
-        messages = self.datastore.search_documents(
-            query_vector=query_vector, conversation_id=conversation_id, topk=self.topk
-        )
+        messages = self.datastore.search_documents(query_vector=query_vector, topk=self.topk)
         return messages

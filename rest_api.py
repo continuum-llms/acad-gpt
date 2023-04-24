@@ -3,7 +3,7 @@ import os
 import shutil
 import uuid
 from pathlib import Path
-from typing import Any, List
+from typing import Any, Dict, List
 
 import numpy as np
 from fastapi import FastAPI, File, UploadFile
@@ -13,6 +13,9 @@ from pydantic import BaseModel
 from acad_gpt.datastore import RedisDataStore, RedisDataStoreConfig
 from acad_gpt.environment import FILE_UPLOAD_PATH, OPENAI_API_KEY, REDIS_HOST, REDIS_PASSWORD, REDIS_PORT
 from acad_gpt.llm_client import EmbeddingClient, EmbeddingConfig
+from acad_gpt.llm_client.openai.conversation.chatgpt_client import ChatGPTClient
+from acad_gpt.llm_client.openai.conversation.config import ChatGPTConfig
+from acad_gpt.memory.manager import MemoryManager
 from acad_gpt.parsers import ParserConfig, PDFParser
 
 
@@ -63,6 +66,14 @@ redis_datastore_config = RedisDataStoreConfig(
 # Instantiate a RedisDataStore object with the RedisDataStoreConfig object
 redis_datastore = RedisDataStore(config=redis_datastore_config, do_flush_data=True)
 
+# Instantiate a MemoryManager object with the RedisDataStore object and EmbeddingClient object
+memory_manager = MemoryManager(datastore=redis_datastore, embed_client=embed_client, topk=1)
+
+# Instantiate a ChatGPTConfig object with the OpenAI API key and verbose set to True
+chat_gpt_config = ChatGPTConfig(api_key=OPENAI_API_KEY, verbose=False)
+# Instantiate a ChatGPTClient object with the ChatGPTConfig object and MemoryManager object
+chat_gpt_client = ChatGPTClient(config=chat_gpt_config, memory_manager=memory_manager)
+
 
 @app.post("/file-upload")
 def upload_file(
@@ -91,16 +102,17 @@ def upload_file(
                 response.append(
                     Response(
                         file_id=file_name,
-                        message=f"File has been indexed with {len(documents)} passages.",
+                        message=f"File `{file.filename}` has been indexed with {len(documents)} passages.",
                     )
                 )
-        finally:
+        except Exception:
             response.append(
                 Response(
                     file_id=file_name,
                     message="Something went wrong!",
                 )
             )
+        finally:
             file.file.close()
 
     return response
@@ -114,7 +126,6 @@ async def search(search_payload: SearchPayload) -> List[Any]:
 
 
 @app.post("/chat/")
-async def chat(search_payload: SearchPayload) -> List[Any]:
-    query_vector = embed_client.embed_queries(queries=[search_payload.query])[0].astype(np.float32).tobytes()
-    search_result = redis_datastore.search_documents(query_vector=query_vector, topk=search_payload.k)
-    return search_result
+async def chat(search_payload: SearchPayload) -> Dict:
+    chat_result = chat_gpt_client.converse(message=search_payload.query).dict()
+    return chat_result
