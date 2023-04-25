@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class RedisDataStore(DataStore):
-    def __init__(self, config: RedisDataStoreConfig, do_flush_data: bool = False):
+    def __init__(self, config: RedisDataStoreConfig, do_flush_data: bool = False, **kwargs):
         super().__init__(config=config)
         self.config = config
         self.do_flush_data = do_flush_data
@@ -61,7 +61,12 @@ class RedisDataStore(DataStore):
                         },
                     ),
                     TextField("text"),  # contains the original message
-                    TagField("conversation_id"),  # `conversation_id` for each session
+                    TextField("title"),
+                    TagField("type"),
+                    TagField("page"),
+                    TagField("section"),
+                    TextField("regionBoundary"),
+                    TagField("document_id"),  # `document_id` for each session
                 ]
             )
             logger.info("Created a new Redis index for storing chat history")
@@ -78,41 +83,40 @@ class RedisDataStore(DataStore):
         redis_pipeline = self.redis_connection.pipeline(transaction=False)
         for document in documents:
             assert (
-                "text" in document and "conversation_id" in document
-            ), "Document must include the fields `text`, and `conversation_id`"
+                "text" in document and "document_id" in document
+            ), "Document must include the fields `text`, and `document_id`"
             redis_pipeline.hset(uuid4().hex, mapping=document)
         redis_pipeline.execute()
 
-    def search_documents(
-        self,
-        query_vector: bytes,
-        conversation_id: str,
-        topk: int = 5,
-    ) -> List[Any]:
+    def search_documents(self, query_vector: bytes, topk: int = 5, **kwargs) -> List[Any]:
         """
         Searches the redis index using the query vector.
 
         Args:
             query_vector (np.ndarray): Embedded query vector.
             topk (int, optional): Number of results. Defaults to 5.
-            result_fields (int, optional): Name of the fields that you want to be
-                                           returned from the search result documents
 
         Returns:
             List[Any]: Search result documents.
         """
         query = (
             Query(
-                f"""(@conversation_id:{{{conversation_id}}})=>[KNN {topk} \
+                f"""*=>[KNN {topk} \
                     @{self.config.vector_field_name} $vec_param AS vector_score]"""
             )
             .sort_by("vector_score")
             .paging(0, topk)
             .return_fields(
                 # parse `result_fields` as strings separated by comma to pass as params
-                "conversation_id",
+                "document_id",
                 "vector_score",
                 "text",
+                "title",
+                "type",
+                "page",
+                "document",
+                "section",
+                "regionBoundary",
             )
             .dialect(2)
         )
@@ -121,32 +125,30 @@ class RedisDataStore(DataStore):
 
         return result_documents
 
-    def get_all_conversation_ids(self) -> List[str]:
+    def get_all_document_ids(self) -> List[str]:
         """
-        Returns conversation ids of all conversations.
+        Returns document titles of all documents.
 
         Returns:
-            List[str]: List of conversation ids stored in redis.
+            List[str]: List of document titles stored in redis.
         """
-        query = Query("*").return_fields("conversation_id")
+        query = Query("*").return_fields("title")
         result_documents = self.redis_connection.ft().search(query).docs
 
-        conversation_ids: List[str] = []
-        conversation_ids = list(
-            set([getattr(result_document, "conversation_id") for result_document in result_documents])
-        )
+        document_ids: List[str] = []
+        document_ids = list(set([getattr(result_document, "document_id") for result_document in result_documents]))
 
-        return conversation_ids
+        return document_ids
 
-    def delete_documents(self, conversation_id: str):
+    def delete_documents(self, document_id: str):
         """
         Deletes all documents for a given conversation id.
 
         Args:
-            conversation_id (str): Id of the conversation to be deleted.
+            document_id (str): Id of the conversation to be deleted.
         """
         query = (
-            Query(f"""(@conversation_id:{{{conversation_id}}})""")
+            Query(f"""(@document_id:{{{document_id}}})""")
             .return_fields(
                 "id",
             )

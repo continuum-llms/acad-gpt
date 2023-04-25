@@ -1,5 +1,4 @@
 import logging
-import uuid
 
 from langchain import LLMChain, OpenAI, PromptTemplate
 from pydantic import BaseModel
@@ -13,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class ChatGPTResponse(BaseModel):
-    conversation_id: str
     message: str
     chat_gpt_answer: str
 
@@ -40,33 +38,25 @@ class ChatGPTClient(LLMClient):
         )
         self.memory_manager = memory_manager
 
-    def converse(self, message: str, conversation_id: str = None) -> ChatGPTResponse:
+    def converse(self, message: str) -> ChatGPTResponse:
         """
-        Allows user to chat with user by leveraging the infinite contextual memor for fetching and
+        Allows user to chat with user by leveraging the infinite contextual memory for fetching and
         adding historical messages to the prompt to the ChatGPT model.
 
         Args:
             message (str): Message by the human user.
-            conversation_id (str, optional): Id of the conversation, if session already exists. Defaults to None.
 
         Returns:
             ChatGPTResponse: Response includes answer from th ChatGPT, conversation_id, and human message.
         """
-        if not conversation_id:
-            conversation_id = uuid.uuid4().hex
 
         history = ""
         try:
-            past_messages = self.memory_manager.get_messages(conversation_id=conversation_id, query=message)
+            past_messages = self.memory_manager.get_messages(query=message)
             history = "\n".join([past_message.text for past_message in past_messages if getattr(past_message, "text")])
         except ValueError as history_not_found_error:
-            logger.warning(
-                f"No previous chat history found for conversation_id: {conversation_id}.\nDetails: {history_not_found_error}"
-            )
+            logger.warning(f"Details: {history_not_found_error}")
         prompt = get_prompt(message=message, history=history)
         chat_gpt_answer = self.chatgpt_chain.predict(prompt=prompt)
 
-        if len(message.strip()) and len(chat_gpt_answer.strip()):
-            self.memory_manager.add_message(conversation_id=conversation_id, human=message, assistant=chat_gpt_answer)
-
-        return ChatGPTResponse(message=message, chat_gpt_answer=chat_gpt_answer, conversation_id=conversation_id)
+        return ChatGPTResponse(message=message, chat_gpt_answer=chat_gpt_answer)
