@@ -18,5 +18,10 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Cloud data store (Redis, Pinecone etc.)
 REDIS_HOST = os.getenv("REDIS_HOST")
-REDIS_PORT = int(os.getenv("REDIS_PORT"))
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+
+
+# API Config
+DEFAULT_PATH = str(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "examples/paper_highlights/pdf")))
+FILE_UPLOAD_PATH = os.getenv("FILE_UPLOAD_PATH", DEFAULT_PATH)
