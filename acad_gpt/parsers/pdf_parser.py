@@ -5,18 +5,21 @@ https://medium.com/@vinitvaibhav9/extracting-pdf-highlights-using-python-9512af4
 import json
 import os
 import shutil
+from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 from uuid import uuid4
 
 import fitz
 import numpy as np
 import scipdf
+import pdf2image
+from PIL import Image, ImageFilter
 from pydantic import BaseModel
 
 from acad_gpt.environment import FILE_UPLOAD_PATH
 from acad_gpt.llm_client.openai.embedding.embedding_client import EmbeddingClient
 from acad_gpt.parsers.base_parser import BaseParser
-from acad_gpt.parsers.config import ParserConfig
+from acad_gpt.parsers.config import ParserConfig, PDFColumnClassifierConfig
 
 
 class Document(BaseModel):
@@ -51,11 +54,13 @@ class PDFParser(BaseParser):
             file_path = getattr(config_item, "file_path_or_url")
             file = PDFParser.read_pdf(file_path=file_path)
 
-            paper_metadata, metadata_path = PDFParser.get_paper_metadata(
+            pdf_columns = 2 if PDFParser.classify_pdf_from_path(pdf_path=file_path) else 1
+            pdf_metadata, metadata_path = PDFParser.get_pdf_metadata(
                 file_path=file_path, extract_figures=config_item.extract_figures
             )
+            pdf_metadata["layout"] = pdf_columns
             parsed_content = {
-                "metadata": paper_metadata,
+                "metadata": pdf_metadata,
                 "metadata_path": metadata_path if config_item.extract_figures else None,
             }
             parsed_content["highlights"] = []
@@ -124,10 +129,10 @@ class PDFParser(BaseParser):
         return post_processed_highlights
 
     @staticmethod
-    def get_paper_metadata(file_path: str, extract_figures: bool = False, figures_directory: str = FILE_UPLOAD_PATH):
-        paper_metadata = None
+    def get_pdf_metadata(file_path: str, extract_figures: bool = False, figures_directory: str = FILE_UPLOAD_PATH):
+        pdf_metadata = None
         try:
-            paper_metadata = scipdf.parse_pdf_to_dict(file_path)
+            pdf_metadata = scipdf.parse_pdf_to_dict(file_path)
             if extract_figures:
                 isExist = os.path.exists(figures_directory)
                 if not isExist:
@@ -139,7 +144,7 @@ class PDFParser(BaseParser):
                 # TODO: clean up extracted images after storing them in object storage
         except Exception as e:
             print(e)
-        return paper_metadata, figures_directory
+        return pdf_metadata, figures_directory
 
     def pdf_to_documents(
         self, pdf_contents: Dict, embed_client: EmbeddingClient, file_name: str, clean_up: bool = True
@@ -266,7 +271,7 @@ class PDFParser(BaseParser):
         return PDFParser._classify_imgs(imgs, config)
 
     @staticmethod
-    def _classify_imgs(imgs: List[Image], config: PDFColumnClassifierConfig) -> bool:
+    def _classify_imgs(imgs: List[Any], config: PDFColumnClassifierConfig) -> bool:
         """
         Classify a list of images as either single-column or two-column.
 
