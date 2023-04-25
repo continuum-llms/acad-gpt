@@ -43,12 +43,10 @@ class HfFSDocStore(DocStore):
         return os.path.join(self.config.repo, file_name)
 
     def upload_from_filename(self, file_path: str, file_name: str) -> None:
-        with open(file_path, "rb") as f:
-            self.upload_from_file(f, file_name)
+        self.fs.put(lpath=file_path, rpath=self.path_in_repo(file_name))
 
     def download_to_filename(self, file_name: str, file_path: str) -> None:
-        with open(file_path, "wb") as f:
-            self.download_to_file(file_name, f)
+        self.fs.get(rpath=self.path_in_repo(file_name), lpath=file_path)
 
     def upload_from_file(self, file, file_name: str) -> None:
         with self.fs.open(self.path_in_repo(file_name), "wb") as f:
