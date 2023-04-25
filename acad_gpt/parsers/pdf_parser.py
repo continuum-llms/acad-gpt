@@ -14,8 +14,6 @@ import fitz
 import numpy as np
 import pdf2image
 import scipdf
-
-import pdf2image
 from PIL import Image, ImageFilter
 from pydantic import BaseModel
 
@@ -36,18 +34,6 @@ class Document(BaseModel):
     regionBoundary: str
     section: str
     embedding: Any
-
-
-from pathlib import Path
-from typing import Dict, List, Union
-
-import numpy as np
-import pdf2image
-from PIL import Image, ImageFilter
-
-from acad_gpt.parsers.base_parser import BaseParser
-from acad_gpt.parsers.config import ParserConfig, PDFColumnClassifierConfig
-
 
 class PDFParser(BaseParser):
     def parse(self, config: Union[ParserConfig, List[ParserConfig]]) -> Dict:
