@@ -105,11 +105,11 @@ def upload_file(
                         message=f"File `{file.filename}` has been indexed with {len(documents)} passages.",
                     )
                 )
-        except Exception:
+        except Exception as e:
             response.append(
                 Response(
                     file_id=file_name,
-                    message="Something went wrong!",
+                    message=f"Something went wrong!\n Detail: {e}",
                 )
             )
         finally:
