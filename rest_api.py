@@ -11,7 +11,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from acad_gpt.datastore import RedisDataStore, RedisDataStoreConfig
-from acad_gpt.environment import FILE_UPLOAD_PATH, OPENAI_API_KEY, REDIS_HOST, REDIS_PASSWORD, REDIS_PORT
+from acad_gpt.docstore.hf_file_system_storage import HfFSDocStore, HfFSDocStoreConfig
+from acad_gpt.environment import (
+    FILE_UPLOAD_PATH,
+    HF_ENDPOINT,
+    HF_REPO,
+    HF_TOKEN,
+    OPENAI_API_KEY,
+    REDIS_HOST,
+    REDIS_PASSWORD,
+    REDIS_PORT,
+)
 from acad_gpt.llm_client import EmbeddingClient, EmbeddingConfig
 from acad_gpt.llm_client.openai.conversation.chatgpt_client import ChatGPTClient
 from acad_gpt.llm_client.openai.conversation.config import ChatGPTConfig
@@ -49,6 +59,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Instantiate document store for storing PDFs on cloud
+hf_docstore_config = HfFSDocStoreConfig(repo=HF_REPO, token=HF_TOKEN, endpoint=HF_ENDPOINT)
+hf_docstore = HfFSDocStore(config=hf_docstore_config)
 
 # Instantiate an EmbeddingConfig object with the OpenAI API key
 embedding_config = EmbeddingConfig(api_key=OPENAI_API_KEY)
@@ -92,6 +106,7 @@ def upload_file(
 
             with file_path.open("wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
+                hf_docstore.upload_from_filename(file_path=f"{FILE_UPLOAD_PATH}/{file_name}", file_name=file_name)
                 parser = PDFParser()
                 parser_config = ParserConfig(file_path_or_url=str(file_path), file_type="PDF", extract_figures=False)
                 results = parser.parse(config=parser_config)

@@ -3,13 +3,16 @@ Based on HuggingFace's File System API.
 
 See https://huggingface.co/docs/huggingface_hub/v0.14.1/en/package_reference/hf_file_system#huggingface_hub.HfFileSystem
 """
+import logging
 import os
 from typing import List, Optional
 
-from huggingface_hub import HfFileSystem
+from huggingface_hub import HfFileSystem, login
 from pydantic import BaseSettings, Field
 
 from acad_gpt.docstore.base import DocStore
+
+logger = logging.getLogger(__name__)
 
 
 class HfFSDocStoreConfig(BaseSettings):
@@ -32,8 +35,13 @@ class HfFSDocStore(DocStore):
     def __init__(self, config: HfFSDocStoreConfig):
         self.config = config
         """ The config to use."""
+        # fail early incase no token is set
+        try:
+            login(self.config.token)
+        except ValueError as hf_value_error:
+            logger.error(hf_value_error)
 
-        self._hf_fs = HfFileSystem()
+        self._hf_fs = HfFileSystem(**self.config.dict())
 
     @property
     def fs(self) -> HfFileSystem:
