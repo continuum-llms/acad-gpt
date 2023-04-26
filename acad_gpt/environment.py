@@ -21,6 +21,19 @@ REDIS_HOST = os.getenv("REDIS_HOST")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
 
+# HF Token
+HF_TOKEN = os.getenv("HF_TOKEN")
+assert (
+    os.getenv("HF_REPO", None) is not None
+), """
+Environment variable `HF_REPO` should be set prior to running acad-gpt.
+You'd need to create a new model on the huggingface hub using the url:
+`https://huggingface.co/new`
+
+then set `HF_REPO` variables value to: HF_REPO={hf_username}/{hf_model_name}
+"""
+HF_REPO = os.getenv("HF_REPO")
+HF_ENDPOINT = os.getenv("HF_ENDPOINT", "https://huggingface.co")
 
 # API Config
 DEFAULT_PATH = str(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "examples/paper_highlights/pdf")))

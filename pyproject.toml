@@ -33,6 +33,7 @@ uvicorn = "^0.21.0"
 python-multipart = "^0.0.5"
 pynvml = "^11.0"
 psutil = "^5.9"
+huggingface-hub = "^0.14.1"
 
 
 [build-system]

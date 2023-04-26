@@ -16,6 +16,7 @@ class ParserConfig(BaseModel):
     extract_figures: bool = False
 
 
+
 class PDF2ImageConversionOptions(BaseModel):
     grayscale: bool = True
     hide_annotations: bool = True

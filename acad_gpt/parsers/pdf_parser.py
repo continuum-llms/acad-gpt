@@ -3,6 +3,7 @@ https://medium.com/@vinitvaibhav9/extracting-pdf-highlights-using-python-9512af4
 """
 
 import json
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -21,6 +22,8 @@ from acad_gpt.llm_client.openai.embedding.embedding_client import EmbeddingClien
 from acad_gpt.parsers.base_parser import BaseParser
 from acad_gpt.parsers.config import ParserConfig, PDFColumnClassifierConfig
 
+logger = logging.getLogger(__name__)
+
 
 class Document(BaseModel):
     document_id: str
@@ -31,7 +34,6 @@ class Document(BaseModel):
     regionBoundary: str
     section: str
     embedding: Any
-
 
 class PDFParser(BaseParser):
     def parse(self, config: Union[ParserConfig, List[ParserConfig]]) -> Dict:
@@ -47,6 +49,7 @@ class PDFParser(BaseParser):
             pdf_metadata, metadata_path = PDFParser.get_pdf_metadata(
                 file_path=file_path, extract_figures=config_item.extract_figures
             )
+            pdf_metadata["file_name"] = os.path.basename(file_path)
             pdf_metadata["layout"] = pdf_columns
             parsed_content = {
                 "metadata": pdf_metadata,
@@ -131,8 +134,8 @@ class PDFParser(BaseParser):
                 # folder should contain only PDF files
                 scipdf.parse_figures(file_path, output_folder=figures_directory)
                 # TODO: clean up extracted images after storing them in object storage
-        except Exception as e:
-            print(e)
+        except Exception as error:
+            logger.error(error)
         return pdf_metadata, figures_directory
 
     def pdf_to_documents(
@@ -140,8 +143,8 @@ class PDFParser(BaseParser):
     ) -> List[Dict]:
         metadata_path = pdf_contents.pop("metadata_path")
         documents = []
-        document_id = uuid4().hex
         metadata = dict(pdf_contents.pop("metadata")) if pdf_contents.get("metadata") else None
+        document_id = metadata.get("file_name") if metadata else None
         title = metadata.pop("title", "")
         if metadata and metadata_path:
             sections = metadata.pop("sections")
