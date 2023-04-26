@@ -11,7 +11,9 @@ from uuid import uuid4
 
 import fitz
 import numpy as np
+import pdf2image
 import scipdf
+
 import pdf2image
 from PIL import Image, ImageFilter
 from pydantic import BaseModel
@@ -229,7 +231,6 @@ class PDFParser(BaseParser):
                 regionBoundary="",
             )
             documents.append(document.dict())
-
         if clean_up and os.path.exists(f"{FILE_UPLOAD_PATH}"):
             shutil.rmtree(FILE_UPLOAD_PATH)
         return documents

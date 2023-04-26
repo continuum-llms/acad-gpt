@@ -12,10 +12,9 @@ class FileType(str, Enum):
 class ParserConfig(BaseModel):
     file_path_or_url: str
     file_type: FileType
-<<<<<<< HEAD
-    extract_figures: bool = False
-=======
     file_title: Optional[str]
+    extract_figures: bool = False
+
 
 
 class PDF2ImageConversionOptions(BaseModel):
@@ -32,4 +31,3 @@ class PDFColumnClassifierConfig(BaseModel):
     vote_threshold: float = 0.7
 
     pdf_conversion_options: PDF2ImageConversionOptions = PDF2ImageConversionOptions()
->>>>>>> 5d7d75e (refactor: move into `pdf_parser.py`)
