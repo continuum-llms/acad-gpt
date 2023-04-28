@@ -7,12 +7,13 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Union
 from uuid import uuid4
 
-import fitz
 import numpy as np
 import pdf2image
+import pdfannots
+import pdfminer
 import scipdf
 from PIL import Image, ImageFilter
 from pydantic import BaseModel
@@ -35,6 +36,7 @@ class Document(BaseModel):
     section: str
     embedding: Any
 
+
 class PDFParser(BaseParser):
     def parse(self, config: Union[ParserConfig, List[ParserConfig]]) -> Dict:
         if not isinstance(config, List):
@@ -43,82 +45,39 @@ class PDFParser(BaseParser):
         parsed_content: Dict[str, Any] = {}
         for config_item in config:
             file_path = getattr(config_item, "file_path_or_url")
-            file = PDFParser.read_pdf(file_path=file_path)
-
-            pdf_columns = 2 if PDFParser.classify_pdf_from_path(pdf_path=file_path) else 1
             pdf_metadata, metadata_path = PDFParser.get_pdf_metadata(
                 file_path=file_path, extract_figures=config_item.extract_figures
             )
             pdf_metadata["file_name"] = os.path.basename(file_path)
-            pdf_metadata["layout"] = pdf_columns
             parsed_content = {
                 "metadata": pdf_metadata,
                 "metadata_path": metadata_path if config_item.extract_figures else None,
             }
-            parsed_content["highlights"] = []
-            for page_number in range(len(file)):
-                highlighted_page_content = PDFParser.get_pdf_highlights(file[page_number])
-                if len(highlighted_page_content):
-                    parsed_content["highlights"].append(
-                        {"text": PDFParser.post_process_highlights(highlighted_page_content), "page": page_number + 1}
-                    )
+            pdf_layout = 2 if PDFParser.classify_pdf_from_path(pdf_path=file_path) else 1
+            parsed_content["highlights"] = PDFParser.get_pdf_highlights(file_path=file_path, pdf_layout=pdf_layout)
+
         return parsed_content
 
     @staticmethod
-    def read_pdf(file_path: str):
-        file = fitz.open(file_path)
-        return file
-
-    @staticmethod
-    def get_pdf_highlights(page: Any) -> List:
-        wordlist = page.get_text("words")  # list of words on page
-        wordlist.sort(key=lambda w: (w[3], w[0]))  # ascending y, then x
-
-        highlights = []
-        annot = page.first_annot
-        while annot:
-            if annot.type[0] == 8:
-                highlights.append(PDFParser.parse_highlight(annot, wordlist))
-            annot = annot.next
+    def get_pdf_highlights(file_path: str, pdf_layout: int) -> List[Dict]:
+        highlights: List[Dict] = []
+        path = Path(file_path)
+        laparams = pdfminer.layout.LAParams()
+        with path.open("rb") as f:
+            doc = pdfannots.process_file(f, columns_per_page=pdf_layout, laparams=laparams)
+        for page in doc.pages:
+            for annotation in page.annots:
+                try:
+                    highlights.append(
+                        {
+                            "text": annotation.gettext(remove_hyphens=True),
+                            "page": annotation.pos.page.pageno + 1,
+                            "regionBoundary": [annotation.pos.x, annotation.pos.y],
+                        }
+                    )
+                except Exception:
+                    continue
         return highlights
-
-    @staticmethod
-    def parse_highlight(
-        annot: fitz.Annot, wordlist: List[Tuple[float, float, float, float, str, int, int, int]]
-    ) -> str:
-        points = annot.vertices
-        quad_count = int(len(points) / 4)
-        sentences = []
-        for i in range(quad_count):
-            # where the highlighted part is
-            r = fitz.Quad(points[i * 4 : i * 4 + 4]).rect
-
-            words = [w for w in wordlist if fitz.Rect(w[:4]).intersects(r)]
-            sentences.append(" ".join(w[4] for w in words))
-        sentence = " ".join(sentences)
-        return sentence
-
-    @staticmethod
-    def jaccard(a, b):
-        c = a.intersection(b)
-        return float(len(c)) / (len(a) + len(b) - len(c))
-
-    @staticmethod
-    def post_process_highlights(highights: List) -> str:
-        post_processed_highlights = ""
-        jaccard_score = 0.0
-        for index in range(len(highights) - 1):
-            highlight_i = set(highights[index][-60:].split())
-            highlight_j = set(highights[index + 1].split()[: len(highlight_i)])
-
-            jaccard_score = PDFParser.jaccard(highlight_i, highlight_j)
-            if jaccard_score > 0.5:
-                post_processed_highlights += " " + highights[index][:-60]
-            else:
-                post_processed_highlights += " " + highights[index]
-        post_processed_highlights += " " + highights[-1]
-
-        return post_processed_highlights
 
     @staticmethod
     def get_pdf_metadata(file_path: str, extract_figures: bool = False, figures_directory: str = FILE_UPLOAD_PATH):
@@ -216,9 +175,9 @@ class PDFParser(BaseParser):
                 text=text,
                 title=title,
                 type="Highlight",
-                page=int(doc.get("page", "")),
+                page=int(doc.get("page", -1)),
                 embedding=embedding,
-                regionBoundary="",
+                regionBoundary=str(doc.get("regionBoundary", "")),
             )
             documents.append(document.dict())
         if clean_up and os.path.exists(f"{FILE_UPLOAD_PATH}"):
