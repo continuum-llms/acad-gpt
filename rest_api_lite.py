@@ -3,9 +3,12 @@ add deps
 TODO: pip install discord requests validators bs4 elasticsearch==7.0.0
 
 # TODO:
-add timestamps for:
-1. when bookmark webpage itself was actually created (optional)
-2. when bookmark was last updated
+- add timestamps for:
+    1. when bookmark webpage itself was actually created (optional)
+    2. when bookmark was last updated
+- add /ask command based on GPT embeddings + chatgpt endpoint
+- add clear roadmap for how to add new commands based on other modalities
+- target for mid may to release to public
 """
 
 
