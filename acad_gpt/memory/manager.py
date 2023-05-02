@@ -86,7 +86,7 @@ class MemoryManager:
         # optionally check if it is a new conversation
         self.add_conversation(Memory(conversation_id=conversation_id))
 
-    def get_messages(self, query: str) -> List[Any]:
+    def get_messages(self, query: str, topk: int = 5, **kwargs) -> List[Any]:
         """
         Gets the messages of a conversation using the query message.
 
@@ -98,5 +98,5 @@ class MemoryManager:
             List[Any]: List of messages of the conversation.
         """
         query_vector = self.embed_client.embed_queries([query])[0].astype(np.float32).tobytes()
-        messages = self.datastore.search_documents(query_vector=query_vector, topk=self.topk)
+        messages = self.datastore.search_documents(query=query_vector, topk=topk, kwargs=kwargs)
         return messages
