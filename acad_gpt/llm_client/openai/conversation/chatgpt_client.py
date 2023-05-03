@@ -38,7 +38,7 @@ class ChatGPTClient(LLMClient):
         )
         self.memory_manager = memory_manager
 
-    def converse(self, message: str) -> ChatGPTResponse:
+    def converse(self, message: str, topk: int = 5, **kwargs) -> ChatGPTResponse:
         """
         Allows user to chat with user by leveraging the infinite contextual memory for fetching and
         adding historical messages to the prompt to the ChatGPT model.
@@ -52,7 +52,7 @@ class ChatGPTClient(LLMClient):
 
         history = ""
         try:
-            past_messages = self.memory_manager.get_messages(query=message)
+            past_messages = self.memory_manager.get_messages(query=message, topk=topk, kwargs=kwargs)
             history = "\n".join([past_message.text for past_message in past_messages if getattr(past_message, "text")])
         except ValueError as history_not_found_error:
             logger.warning(f"Details: {history_not_found_error}")

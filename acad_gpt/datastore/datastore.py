@@ -25,5 +25,5 @@ class DataStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def search_documents(self, query_vector: Any, topk: int, **kwargs) -> List[Any]:
+    def search_documents(self, query: Any, topk: int, **kwargs) -> List[Any]:
         raise NotImplementedError

@@ -22,10 +22,6 @@ redis = "^4.5.1"
 openai = "^0.27.2"
 langchain = "^0.0.113"
 python-dotenv = "^1.0.0"
-pdfannots = "^0.4"
-PyMuPDF = "^1.18.13"
-pillow = "^9.5.0"
-pdf2image = "^1.16.3"
 scipdf-mirror = "^0.1.dev0"
 bs4 = "^0.0.1"
 fastapi = "^0.95.1"
@@ -34,6 +30,10 @@ python-multipart = "^0.0.5"
 pynvml = "^11.0"
 psutil = "^5.9"
 huggingface-hub = "^0.14.1"
+elasticsearch = "^7.0.0"
+discord = "^2.2.2"
+validators = "^0.20.0"
+
 
 
 [build-system]

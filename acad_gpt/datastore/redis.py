@@ -1,6 +1,6 @@
+import hashlib
 import logging
 from typing import Any, Dict, List
-from uuid import uuid4
 
 import redis
 from redis.commands.search.field import TagField, TextField, VectorField
@@ -63,10 +63,8 @@ class RedisDataStore(DataStore):
                     TextField("text"),  # contains the original message
                     TextField("title"),
                     TagField("type"),
-                    TagField("page"),
-                    TagField("section"),
-                    TextField("regionBoundary"),
-                    TagField("document_id"),  # `document_id` for each session
+                    TagField("status"),
+                    TextField("url"),
                 ]
             )
             logger.info("Created a new Redis index for storing chat history")
@@ -82,13 +80,13 @@ class RedisDataStore(DataStore):
         """
         redis_pipeline = self.redis_connection.pipeline(transaction=False)
         for document in documents:
-            assert (
-                "text" in document and "document_id" in document
-            ), "Document must include the fields `text`, and `document_id`"
-            redis_pipeline.hset(uuid4().hex, mapping=document)
+            assert "text" in document and "url" in document, "Document must include the fields `text`, and `url`"
+            sha = hashlib.sha256()
+            sha.update(document.get("url").encode())
+            redis_pipeline.hset(sha.hexdigest(), mapping=document)
         redis_pipeline.execute()
 
-    def search_documents(self, query_vector: bytes, topk: int = 5, **kwargs) -> List[Any]:
+    def search_documents(self, query: bytes, topk: int = 5, **kwargs) -> List[Any]:
         """
         Searches the redis index using the query vector.
 
@@ -99,30 +97,39 @@ class RedisDataStore(DataStore):
         Returns:
             List[Any]: Search result documents.
         """
-        query = (
+        status = kwargs.get("status", None)
+        type = kwargs.get("type", None)
+        tag = "("
+        if status:
+            tag += f"@status:{{{status}}}"
+        if type:
+            tag += f"@type:{{{type}}}"
+        tag += ")"
+        # if no tags are selected
+        if len(tag) < 3:
+            tag = "*"
+        query_obj = (
             Query(
-                f"""*=>[KNN {topk} \
+                f"""{tag}=>[KNN {topk} \
                     @{self.config.vector_field_name} $vec_param AS vector_score]"""
             )
             .sort_by("vector_score")
             .paging(0, topk)
             .return_fields(
-                # parse `result_fields` as strings separated by comma to pass as params
-                "document_id",
                 "vector_score",
                 "text",
                 "title",
                 "type",
-                "page",
-                "document",
-                "section",
-                "regionBoundary",
+                "status",
+                "url",
             )
             .dialect(2)
         )
-        params_dict = {"vec_param": query_vector}
-        result_documents = self.redis_connection.ft().search(query, query_params=params_dict).docs
-
+        params_dict = {"vec_param": query}
+        try:
+            result_documents = self.redis_connection.ft().search(query_obj, query_params=params_dict).docs
+        except redis.exceptions.ResponseError as redis_error:
+            logger.info(f"Details: {redis_error}")
         return result_documents
 
     def get_all_document_ids(self) -> List[str]:
