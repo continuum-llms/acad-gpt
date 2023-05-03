@@ -13,9 +13,6 @@ from acad_gpt.parsers.webpage_parser import WebPageParser
 def get_url_type(url):
     if url.split(".")[-1].strip() == "pdf":
         return DocumentType.pdf, url
-    elif "arxiv.org/abs/" in url:
-        url = f'{url.replace("abs", "pdf")}.pdf'
-        return DocumentType.paper, url
     else:
         return DocumentType.webpage, url
 
