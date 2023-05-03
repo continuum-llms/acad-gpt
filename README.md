@@ -1,6 +1,9 @@
 # AcadGPT
 
-A service for distilling papers, GitHub repos, and much more using the power of LLMs.
+A Discord Bot for distilling papers, GitHub repos, Blogposts, and much more using the power of LLMs and vector search.
+
+![ezgif com-video-to-gif (1)](https://user-images.githubusercontent.com/6007894/235933127-c4abb7bb-7f07-4585-8f4c-0847d6506c4d.gif)
+
 
 ## Getting Started
 
