@@ -29,11 +29,11 @@ poetry install
 
 ## Serving
 
-Serve Grobid
+<!-- Serve Grobid
 
 ```bash
 bash serve_grobid.sh
-```
+``` -->
 
 Run your bot:
 
