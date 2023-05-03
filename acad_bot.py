@@ -105,10 +105,11 @@ async def search(
     interaction, query: str, status: Optional[str] = None, topk: Optional[int] = 5, ask_gpt: Optional[bool] = False
 ):
     if ask_gpt:
+        await interaction.response.defer()
         chat_result = (
             f"`{client.user}`: {query}\n`ChatGPT`: {chat_gpt_client.converse(query, topk=topk).chat_gpt_answer}"
         )
-        await interaction.response.send_message(chat_result)
+        await interaction.followup.send(chat_result)
     else:
         topk_hits = es_datastore.search_documents(query, status=status, topk=topk)
         if len(topk_hits) > 0:

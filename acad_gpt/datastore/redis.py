@@ -108,7 +108,7 @@ class RedisDataStore(DataStore):
         # if no tags are selected
         if len(tag) < 3:
             tag = "*"
-        query = (
+        query_obj = (
             Query(
                 f"""{tag}=>[KNN {topk} \
                     @{self.config.vector_field_name} $vec_param AS vector_score]"""
@@ -127,7 +127,7 @@ class RedisDataStore(DataStore):
         )
         params_dict = {"vec_param": query}
         try:
-            result_documents = self.redis_connection.ft().search(query, query_params=params_dict).docs
+            result_documents = self.redis_connection.ft().search(query_obj, query_params=params_dict).docs
         except redis.exceptions.ResponseError as redis_error:
             logger.info(f"Details: {redis_error}")
         return result_documents
